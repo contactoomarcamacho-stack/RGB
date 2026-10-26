@@ -18,7 +18,7 @@ public final class RemoteView extends ViewGroup {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF body = new RectF();
     private final Button[] keys = new Button[24];
-    private float unit;
+    private RemoteGeometry geometry;
     private static final String[] CAPTIONS = {
         "", "", "OFF", "ON", "R", "G", "B", "W",
         "", "", "", "FLASH", "", "", "", "STROBE",
@@ -35,7 +35,7 @@ public final class RemoteView extends ViewGroup {
     public RemoteView(Context context,Listener listener) {
         super(context);
         setWillNotDraw(false);
-        setBackgroundColor(0xFF18191D);
+        setBackgroundColor(0xFFF7F7F4);
         setClipToPadding(false);
         for (int i=0;i<24;i++) {
             final int action=i;
@@ -68,42 +68,43 @@ public final class RemoteView extends ViewGroup {
     @Override protected void onMeasure(int widthSpec,int heightSpec) {
         int width=MeasureSpec.getSize(widthSpec), height=MeasureSpec.getSize(heightSpec);
         setMeasuredDimension(width,height);
-        float availableW=Math.max(1,width-getPaddingLeft()-getPaddingRight());
-        float availableH=Math.max(1,height-getPaddingTop()-getPaddingBottom());
-        unit=Math.min(availableW*0.94f,availableH*0.62f*0.96f);
-        float bodyH=unit/0.62f;
-        float left=getPaddingLeft()+(availableW-unit)/2;
-        float top=getPaddingTop()+(availableH-bodyH)/2;
-        body.set(left,top,left+unit,top+bodyH);
-        int size=Math.max(1,Math.round(unit*0.170f));
+        geometry=new RemoteGeometry(width,height,getPaddingLeft(),getPaddingTop(),getPaddingRight(),getPaddingBottom());
+        body.set(geometry.left,geometry.top,geometry.left+geometry.width,geometry.top+geometry.height);
+        int size=geometry.keySize;
         for (int i=0;i<24;i++) {
-            keys[i].setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,unit*(i%4==3 && i>=8 ? 0.043f : 0.071f));
+            keys[i].setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,size*(i%4==3 && i>=8 ? 0.23f : 0.38f));
             keys[i].measure(MeasureSpec.makeMeasureSpec(size,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(size,MeasureSpec.EXACTLY));
         }
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
         for(int i=0;i<24;i++) {
-            int col=i%4,row=i/4;
-            int x=Math.round(body.left+unit*(0.092f+col*0.216f));
-            int y=Math.round(body.top+body.height()*(0.173f+row*0.114f));
+            int x=geometry.keyLeft(i),y=geometry.keyTop(i);
             keys[i].layout(x,y,x+keys[i].getMeasuredWidth(),y+keys[i].getMeasuredHeight());
         }
     }
     private void round(Canvas canvas,float l,float t,float r,float b,float radius,int color) {
         paint.setColor(color); canvas.drawRoundRect(new RectF(l,t,r,b),radius,radius,paint);
     }
+    private void panel(Canvas canvas,int col,int row,int columns,int rows) {
+        float gap=Math.min(geometry.cellWidth,geometry.cellHeight)*0.035f;
+        float x=geometry.gridLeft+col*geometry.cellWidth,y=geometry.gridTop+row*geometry.cellHeight;
+        round(canvas,x+gap,y+gap,x+columns*geometry.cellWidth-gap,y+rows*geometry.cellHeight-gap,
+            Math.min(geometry.cellWidth,geometry.cellHeight)*0.12f,0xFF9699A1);
+    }
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        if (geometry==null) return;
         float x=body.left,y=body.top,w=body.width(),h=body.height();
-        round(canvas,x-w*0.009f,y-h*0.004f,x+w+w*0.009f,y+h+h*0.004f,w*0.055f,0xFF08090B);
-        round(canvas,x,y,x+w,y+h,w*0.042f,0xFFC2C4C9);
-        round(canvas,x+w*0.012f,y+h*0.008f,x+w*0.988f,y+h*0.992f,w*0.033f,0xFFF7F7F4);
-        // Grey panels behind the first two top keys, power keys and colour grid.
-        round(canvas,x+w*0.068f,y+h*0.165f,x+w*0.502f,y+h*0.300f,w*0.033f,0xFF9699A1);
-        round(canvas,x+w*0.504f,y+h*0.165f,x+w*0.936f,y+h*0.300f,w*0.033f,0xFF9699A1);
-        round(canvas,x+w*0.068f,y+h*0.302f,x+w*0.718f,y+h*0.882f,w*0.033f,0xFF9699A1);
-        round(canvas,x+w*0.725f,y+h*0.302f,x+w*0.936f,y+h*0.424f,w*0.033f,0xFF9699A1);
+        float unit=Math.min(w,h);
+        round(canvas,x,y,x+w,y+h,unit*0.035f,0xFF24252A);
+        round(canvas,x+unit*0.004f,y+unit*0.004f,x+w-unit*0.004f,y+h-unit*0.004f,unit*0.031f,0xFFC2C4C9);
+        round(canvas,x+unit*0.010f,y+unit*0.010f,x+w-unit*0.010f,y+h-unit*0.010f,unit*0.026f,0xFFF7F7F4);
+        panel(canvas,0,0,2,1);
+        panel(canvas,2,0,2,1);
+        panel(canvas,0,1,3,5);
+        panel(canvas,3,1,1,1);
     }
+
     private static final class SunButton extends Button {
         private final Paint icon = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final boolean up;
