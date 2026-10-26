@@ -75,7 +75,7 @@ public final class RemoteView extends ViewGroup {
         float left=getPaddingLeft()+(availableW-unit)/2;
         float top=getPaddingTop()+(availableH-bodyH)/2;
         body.set(left,top,left+unit,top+bodyH);
-        int size=Math.max(1,Math.round(unit*0.188f));
+        int size=Math.max(1,Math.round(unit*0.170f));
         for (int i=0;i<24;i++) {
             keys[i].setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,unit*(i%4==3 && i>=8 ? 0.043f : 0.071f));
             keys[i].measure(MeasureSpec.makeMeasureSpec(size,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(size,MeasureSpec.EXACTLY));
@@ -84,7 +84,7 @@ public final class RemoteView extends ViewGroup {
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
         for(int i=0;i<24;i++) {
             int col=i%4,row=i/4;
-            int x=Math.round(body.left+unit*(0.083f+col*0.216f));
+            int x=Math.round(body.left+unit*(0.092f+col*0.216f));
             int y=Math.round(body.top+body.height()*(0.173f+row*0.114f));
             keys[i].layout(x,y,x+keys[i].getMeasuredWidth(),y+keys[i].getMeasuredHeight());
         }
