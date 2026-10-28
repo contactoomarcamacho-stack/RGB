@@ -1,9 +1,9 @@
-# Validación del control LED
+# Validación de la rueda LED 4.0
 
-El usuario confirmó que RGB F7 a 40 kHz controla el encendido, apagado y colores de su tira LED en V2. Esta versión conserva esas señales y cambia la interfaz por una réplica de la distribución del mando fotografiado. La bombilla queda fuera del alcance solicitado.
+Se conserva IrCodes y el perfil F7 a 40 kHz que el usuario confirmó físicamente. Se sustituye el mando de 24 círculos por la referencia nueva: aro de colores táctil, brillo, encendido, apagado, efectos y blanco. TV no tiene acción.
 
-Las clases Java se verifican contra API Android 35; IrCodesTest comprueba la codificación NEC. El workflow de GitHub ejecuta las pruebas, assembleDebug y lintDebug antes de adjuntar el APK.
+WheelPaletteTest recorre ángulos positivos y negativos, verifica los sectores de la referencia, la interpolación circular corta, el rango de matiz y que los 15 comandos de color resultan accesibles sin emitir comandos de efectos o alimentación desde la rueda. Las pruebas NEC existentes siguen verificando los pulsos y complementos.
 
-Pendiente de prueba en el teléfono: aspecto visual, tamaño de botones, modo inmersivo y funcionamiento físico de cada tecla tras instalar la versión 3.1. La interfaz se dibuja con formas vectoriales y botones nativos; no utiliza la fotografía como superficie táctil.
+La emisión conserva únicamente el último comando pendiente durante un envío; mantiene una separación mínima aproximada de 120 ms entre comienzos. Se detiene la repetición de brillo al salir de la actividad. No se agrega acceso a red ni permisos adicionales.
 
-Ajuste de pantalla 3.1: se elimina la proporción fija 0,62 de la carcasa. RemoteGeometry distribuye las 24 teclas en todo el ancho y alto seguros, manteniendo botones circulares. RemoteGeometryTest cubre nueve tamaños en ambas orientaciones, variantes con márgenes de sistema, límites y ausencia de superposición. No se modifican MainActivity, IrCodes ni el envío IR respecto a 3.0.
+Pendiente de prueba física de esta versión: respuesta a arrastre lento y rápido, color final al levantar el dedo, brillo mantenido, disposición en el teléfono del usuario y botón TV sin acción. El estado visible no es confirmación recibida de las luces.

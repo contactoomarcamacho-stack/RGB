@@ -5,6 +5,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.ConsumerIrManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.Toast;
 import java.util.concurrent.ExecutorService;
@@ -16,12 +19,15 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private boolean busy, active;
+    private int pending=-1;
+    private WheelRemoteView remote;
+    private final Handler handler=new Handler(Looper.getMainLooper());
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         ir = (ConsumerIrManager)getSystemService(Context.CONSUMER_IR_SERVICE);
         prefs = getSharedPreferences("rgb-v2",MODE_PRIVATE);
-        RemoteView remote = new RemoteView(this,this::send);
+        remote = new WheelRemoteView(this,this::send);
         remote.setOnApplyWindowInsetsListener((v,insets)->{
             remote.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),
                 insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
@@ -40,7 +46,8 @@ public class MainActivity extends Activity {
         super.onWindowFocusChanged(focus); if (focus) fullscreen();
     }
     private void send(int action) {
-        if (busy || !active) return;
+        if (!active) return;
+        if (busy) { pending=action; return; }
         long frame = IrCodes.profile(2,action);
         int frequency = 40000;
         boolean msb = false;
@@ -59,19 +66,30 @@ public class MainActivity extends Activity {
         final int carrier = frequency;
         final boolean order = msb;
         busy=true;
+        final long started=SystemClock.uptimeMillis();
         worker.execute(()->{
             String failure=null;
             try { ir.transmit(carrier,IrCodes.pattern(code,order)); }
             catch (RuntimeException ex) { failure="No se pudo enviar la señal infrarroja"; }
             final String message = failure;
             runOnUiThread(()->{
-                busy=false;
-                if (!isDestroyed() && active && message != null) error(message);
+                if (message != null) {
+                    busy=false; pending=-1;
+                    if (!isDestroyed() && active) error(message);
+                    return;
+                }
+                // Coalesce fast wheel gestures: retain only the latest requested colour.
+                handler.postDelayed(()->{
+                    busy=false;
+                    if (isDestroyed() || !active) { pending=-1; return; }
+                    int next=pending; pending=-1;
+                    if (next>=0) send(next);
+                },Math.max(0,120-(SystemClock.uptimeMillis()-started)));
             });
         });
     }
     private void error(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
     @Override protected void onResume() { super.onResume(); active=true; }
-    @Override protected void onPause() { active=false; super.onPause(); }
+    @Override protected void onPause() { active=false; pending=-1; remote.stopInteraction(); super.onPause(); }
     @Override protected void onDestroy() { worker.shutdown(); super.onDestroy(); }
 }
