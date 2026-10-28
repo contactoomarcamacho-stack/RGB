@@ -1,103 +1,95 @@
 package com.camacho.rgbcontrol;
 
 import android.app.Activity;
-import android.os.Bundle;
-import android.os.Vibrator;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.ConsumerIrManager;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.view.Gravity;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
 import android.widget.Toast;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+/** LED-only remote. Uses the F7 / 40 kHz configuration confirmed on the user's strip. */
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
-    private TextView status;
-    // Common 24-key RGB remote NEC codes. These are test candidates, not guaranteed for every lamp.
-    // NEC address 0x00FF, command bytes mapped by common 24-key RGB IR controllers.
-    private static final int[][] CODES = {
-        {0x3A,0xBA,0x82,0x02}, // brightness up, down, off, on
-        {0x1A,0x9A,0xA2,0x22}, // red, green, blue, white
-        {0x2A,0xAA,0x92,0x12},
-        {0x0A,0x8A,0xB2,0x32},
-        {0x38,0xB8,0x78,0xF8},
-        {0x18,0x98,0x58,0xD8}
-    };
-    private static final String[][] LABELS = {
-        {"☀ +", "☀ −", "OFF", "ON"},
-        {"ROJO", "VERDE", "AZUL", "BLANCO"},
-        {"NARANJA", "VERDE 2", "AZUL 2", "FLASH"},
-        {"NARANJA 2", "CIAN", "VIOLETA", "STROBE"},
-        {"AMARILLO", "CELESTE", "ROSA", "FADE"},
-        {"AMARILLO 2", "AZUL 3", "ROSA 2", "SMOOTH"}
-    };
-    private static final int[][] COLORS = {
-        {0xFFE8AD28,0xFFE8AD28,0xFF303030,0xFF2E8540},
-        {0xFFEA2929,0xFF19A951,0xFF2555ED,0xFFDDDDDD},
-        {0xFFFF6D17,0xFF2AD66B,0xFF1D70ED,0xFF333333},
-        {0xFFFF8B22,0xFF0CCFC8,0xFF9834C8,0xFF333333},
-        {0xFFFFCF16,0xFF22BCE7,0xFFFF43B6,0xFF333333},
-        {0xFFF4DE1C,0xFF3457DE,0xFFED74C4,0xFF333333}
-    };
-    @Override public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        ir = (ConsumerIrManager) getSystemService(Context.CONSUMER_IR_SERVICE);
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(0xFF10131A);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(18,24,18,24);
-        scroll.addView(root);
-        TextView title = new TextView(this);
-        title.setText("CAMACHO RGB CONTROL"); title.setTextColor(Color.WHITE); title.setTextSize(23);
-        title.setTypeface(null, Typeface.BOLD); title.setGravity(Gravity.CENTER);
-        root.addView(title);
-        status = new TextView(this); status.setTextColor(0xFFB6C3D1); status.setTextSize(14);
-        status.setGravity(Gravity.CENTER); status.setPadding(0,12,0,22);
-        status.setText(ir != null && ir.hasIrEmitter() ? "Emisor IR detectado. Apuntá a la luz." : "No se detectó emisor infrarrojo compatible.");
-        root.addView(status);
-        for(int r=0;r<6;r++) {
-            LinearLayout line = new LinearLayout(this); line.setOrientation(LinearLayout.HORIZONTAL);
-            for(int c=0;c<4;c++) {
-                final int code=CODES[r][c];
-                Button b = new Button(this); b.setText(LABELS[r][c]); b.setTextSize(11);
-                b.setAllCaps(false); b.setTextColor(Color.WHITE);
-                GradientDrawable bg = new GradientDrawable(); bg.setColor(COLORS[r][c]); bg.setCornerRadius(16);
-                b.setBackground(bg);
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,66,1);
-                p.setMargins(4,5,4,5); line.addView(b,p);
-                b.setOnClickListener(v -> send(code));
-            }
-            root.addView(line);
-        }
-        Button allOff=new Button(this); allOff.setText("APAGAR TODO (REPETIR OFF)");
-        allOff.setTextColor(Color.WHITE); allOff.setBackgroundColor(0xFFAD2432);
-        root.addView(allOff);
-        allOff.setOnClickListener(v -> { for(int i=0;i<3;i++) send(0x82); });
-        TextView hint=new TextView(this);
-        hint.setText("Códigos de prueba para controles RGB de 24 teclas. Si no responden las luces, se necesita identificar el protocolo del control original. El infrarrojo requiere apuntar hacia el receptor.");
-        hint.setTextColor(0xFFAAB3C1); hint.setTextSize(12); hint.setPadding(6,20,6,0);
-        root.addView(hint);
-        setContentView(scroll);
+    private SharedPreferences prefs;
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private boolean busy, active;
+    private int pending=-1;
+    private WheelRemoteView remote;
+    private final Handler handler=new Handler(Looper.getMainLooper());
+
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
+        ir = (ConsumerIrManager)getSystemService(Context.CONSUMER_IR_SERVICE);
+        prefs = getSharedPreferences("rgb-v2",MODE_PRIVATE);
+        remote = new WheelRemoteView(this,this::send);
+        remote.setOnApplyWindowInsetsListener((v,insets)->{
+            remote.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),
+                insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        setContentView(remote);
+        fullscreen();
     }
-    private void send(int command) {
-        if(ir==null || !ir.hasIrEmitter()) { Toast.makeText(this,"Este teléfono no expone un emisor IR compatible",Toast.LENGTH_SHORT).show(); return; }
-        // NEC: 9ms mark, 4.5ms space; 32 bits LSB first; 560us mark per bit.
-        int[] bytes={0x00,0xFF,command & 0xFF,(~command)&0xFF};
-        int[] pulse=new int[2+32*2+1]; int pos=0;
-        pulse[pos++]=9000; pulse[pos++]=4500;
-        for(int value:bytes) for(int bit=0;bit<8;bit++) {
-            pulse[pos++]=560;
-            pulse[pos++]=((value>>bit)&1)==1 ? 1690 : 560;
-        }
-        pulse[pos]=560;
-        try { ir.transmit(38000,pulse); status.setText("Señal IR enviada: 0x"+Integer.toHexString(command).toUpperCase()); }
-        catch(Exception ex) { Toast.makeText(this,"Error enviando IR: "+ex.getMessage(),Toast.LENGTH_LONG).show(); }
+    private void fullscreen() {
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
     }
+    @Override public void onWindowFocusChanged(boolean focus) {
+        super.onWindowFocusChanged(focus); if (focus) fullscreen();
+    }
+    private void send(int action) {
+        if (!active) return;
+        if (busy) { pending=action; return; }
+        long frame = IrCodes.profile(2,action);
+        int frequency = 40000;
+        boolean msb = false;
+        // Retain any individual codes the user previously confirmed in V2.
+        String saved = prefs.getString("key-"+action,null);
+        if (saved != null) {
+            try {
+                String[] parts = saved.split(":");
+                frame=IrCodes.parse(parts[0]); frequency=Integer.parseInt(parts[1]); msb=Boolean.parseBoolean(parts[2]);
+            } catch (RuntimeException ex) { error("Código guardado inválido para este botón"); return; }
+        }
+        try {
+            if (ir == null || !ir.hasIrEmitter()) { error("No se detectó un emisor infrarrojo compatible"); return; }
+        } catch (RuntimeException ex) { error("No se pudo acceder al emisor infrarrojo"); return; }
+        final long code = frame;
+        final int carrier = frequency;
+        final boolean order = msb;
+        busy=true;
+        final long started=SystemClock.uptimeMillis();
+        worker.execute(()->{
+            String failure=null;
+            try { ir.transmit(carrier,IrCodes.pattern(code,order)); }
+            catch (RuntimeException ex) { failure="No se pudo enviar la señal infrarroja"; }
+            final String message = failure;
+            runOnUiThread(()->{
+                if (message != null) {
+                    busy=false; pending=-1;
+                    if (!isDestroyed() && active) error(message);
+                    return;
+                }
+                // Coalesce fast wheel gestures: retain only the latest requested colour.
+                handler.postDelayed(()->{
+                    busy=false;
+                    if (isDestroyed() || !active) { pending=-1; return; }
+                    int next=pending; pending=-1;
+                    if (next>=0) send(next);
+                },Math.max(0,120-(SystemClock.uptimeMillis()-started)));
+            });
+        });
+    }
+    private void error(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
+    @Override protected void onResume() { super.onResume(); active=true; }
+    @Override protected void onPause() { active=false; pending=-1; remote.stopInteraction(); super.onPause(); }
+    @Override protected void onDestroy() { worker.shutdown(); super.onDestroy(); }
 }
