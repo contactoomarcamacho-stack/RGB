@@ -1,6 +1,6 @@
 # CAMACHO RGB CONTROL · luces y TV LG
 
-Versión 5.1 (versionCode 7). El botón TV de la rueda LED abre una segunda pantalla basada en la referencia del usuario: fondo oscuro, controles en cian, encendido, flechas, confirmación, volumen, silencio y micrófono. El mando LG no muestra títulos ni palabras: solo iconos. Las etiquetas para lectores de pantalla se conservan. Atrás de Android vuelve al control de luces. La rueda LED, sus códigos y la frecuencia de 40 kHz se conservan.
+Versión 5.2 (versionCode 8). El botón TV de la rueda LED abre una segunda pantalla basada en la referencia del usuario: fondo oscuro, controles en cian, encendido, flechas, confirmación, volumen, silencio. El mando LG no muestra títulos ni palabras: solo iconos. Las etiquetas para lectores de pantalla se conservan. Atrás de Android vuelve al control de luces. La rueda LED, sus códigos y la frecuencia de 40 kHz se conservan.
 
 ## TV por infrarrojo
 
@@ -19,15 +19,9 @@ Esta función usa el protocolo local de webOS por WSS en el puerto 3001 y su soc
 
 El giroscopio mide los movimientos y el acelerómetro ayuda a compensar la inclinación lateral. Se filtra el ruido y se limitan los desplazamientos. Si no existe giroscopio, la app lo informa y mantiene los botones IR. No se guarda un historial de sensores ni se envían datos a servidores externos. Solo se conecta a la IP privada que ingresa el usuario; la primera vinculación y los cambios de certificado requieren confirmación. La clave de vinculación se guarda en las preferencias privadas de la app.
 
-## Control de voz
-
-Tocá el icono de micrófono del control LG. Se abre el reconocedor de voz disponible en Android, configurado para español de Uruguay. Ejemplos: «subí el volumen», «bajá el volumen», «silencio», «arriba», «abajo», «izquierda», «derecha», «confirmar», «encendé la tele» y «apagá el televisor». Cada orden envía una sola pulsación del botón correspondiente. Alimentación y silencio siguen siendo conmutadores, igual que los botones físicos: la app no conoce el estado real del televisor.
-
-Se ignoran frases ajenas al vocabulario y negaciones como «no apagues la tele». No es una búsqueda de contenido ni el asistente de voz de LG. La app no escucha permanentemente ni incorpora grabación de audio: recibe el texto del servicio Android después de que el usuario toca el micrófono. Ese servicio puede mostrar su propia pantalla, solicitar acceso al micrófono o necesitar Internet; si no existe o no está disponible, la app lo informa sin cerrarse. La voz requiere apuntar al receptor IR, igual que los botones. Si había un puntero vinculado activo, al volver del reconocedor se intenta restaurar esa conexión.
-
 ## Ajuste de pantalla
 
-LgGeometry usa el área segura real y ajusta tamaños y posiciones de los diez iconos. En vertical agrupa encendido, cruceta y botones inferiores; en horizontal mueve alimentación/micrófono a la izquierda y volumen a la derecha para aprovechar la altura. No estira círculos ni muestra las leyendas anteriores. El control LED conserva sus nombres y diseño previos; la solicitud de quitar palabras corresponde a la pantalla LG. Los diálogos de conexión, los avisos de error y la pantalla del servicio de voz conservan texto necesario para usarlos.
+LgGeometry usa el área segura real y ajusta tamaños y posiciones de los nueve iconos. En vertical agrupa encendido, cruceta y botones inferiores; en horizontal mueve alimentación/silencio a la izquierda y volumen a la derecha para aprovechar la altura. No estira círculos ni muestra las leyendas anteriores. El control LED conserva sus nombres y diseño previos; la solicitud de quitar palabras corresponde a la pantalla LG. Los diálogos de conexión, los avisos de error conservan texto necesario para usarlos.
 
 ## Validación y compilación
 
@@ -45,4 +39,5 @@ Las pruebas verifican pulsos NEC y LG, complementos, equivalencia MSB/LSB, rueda
 
 El protocolo se implementa de forma independiente usando sus formatos públicos; no se copia código fuente de Connect SDK en la aplicación. Java-WebSocket se integra como dependencia MIT. La instalación de un APK de depuración puede requerir desinstalar la versión anterior si su firma difiere (se borran los datos locales).
 
-Voz Android: https://developer.android.com/reference/android/speech/RecognizerIntent
+
+Actualización 5.2: se elimina el botón de micrófono, el reconocedor y el vocabulario de voz. Silencio vuelve a quedar centrado en la fila inferior del mando vertical. Se mantienen el diseño adaptable, los iconos sin texto, los controles LED/LG y el puntero opcional.

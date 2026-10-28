@@ -11,20 +11,20 @@ import android.widget.Button;
 
 /** Dark, cyan LG remote matching the user's first reference. */
 public final class LgRemoteView extends ViewGroup {
-    public interface Listener { void press(int action); void configurePointer(); void voice(); }
-    private final Button[] keys=new Button[10];
+    public interface Listener { void press(int action); void configurePointer(); }
+    private final Button[] keys=new Button[9];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Handler handler=new Handler(Looper.getMainLooper()); private Runnable repeat;
     private LgGeometry geometry;
     private float x,y,w,h,cx,cy,r; private boolean motion;
     public LgRemoteView(Context context,Listener listener) {
         super(context); setWillNotDraw(false); setBackgroundColor(0xFF151D27);
-        for(int i=0;i<10;i++) {
+        for(int i=0;i<9;i++) {
             final int action=i;
             Button b=new IconButton(context,i); keys[i]=b;
-            b.setContentDescription(i==9 ? "Control por voz":LgCodes.LABELS[i]); b.setBackgroundColor(Color.TRANSPARENT);
+            b.setContentDescription(LgCodes.LABELS[i]); b.setBackgroundColor(Color.TRANSPARENT);
             b.setPadding(0,0,0,0); b.setMinWidth(0); b.setMinHeight(0); b.setMinimumWidth(0); b.setMinimumHeight(0); b.setStateListAnimator(null);
-            b.setOnClickListener(v->{ if(action==9)listener.voice();else listener.press(action); });
+            b.setOnClickListener(v->listener.press(action));
             if(i>=1 && i<=4 || i==6 || i==7) b.setOnTouchListener((v,event)->{
                 if(event.getActionMasked()==MotionEvent.ACTION_DOWN) {
                     stopInteraction(); listener.press(action);
@@ -49,10 +49,10 @@ public final class LgRemoteView extends ViewGroup {
         int width=MeasureSpec.getSize(widthSpec),height=MeasureSpec.getSize(heightSpec); setMeasuredDimension(width,height);
         geometry=new LgGeometry(width,height,getPaddingLeft(),getPaddingTop(),getPaddingRight(),getPaddingBottom());
         x=geometry.x;y=geometry.y;w=geometry.width;h=geometry.height;cx=geometry.cx;cy=geometry.cy;r=geometry.radius;
-        for(int i=0;i<10;i++)size(keys[i],geometry.keyWidth[i],geometry.keyHeight[i]);
+        for(int i=0;i<9;i++)size(keys[i],geometry.keyWidth[i],geometry.keyHeight[i]);
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
-        for(int i=0;i<10;i++) {
+        for(int i=0;i<9;i++) {
             int x=geometry.left(i),y=geometry.top(i);keys[i].layout(x,y,x+keys[i].getMeasuredWidth(),y+keys[i].getMeasuredHeight());
         }
     }
@@ -90,10 +90,6 @@ public final class LgRemoteView extends ViewGroup {
                 Path path=new Path();path.moveTo(-s*.18f,s*.08f);path.lineTo(0,-s*.10f);path.lineTo(s*.18f,s*.08f);c.drawPath(path,p);c.restore();
             } else if(action==5) {
                 Path check=new Path();check.moveTo(cx-s*.20f,cy);check.lineTo(cx-s*.04f,cy+s*.15f);check.lineTo(cx+s*.23f,cy-s*.17f);c.drawPath(check,p);
-            } else if(action==9) {
-                c.drawRoundRect(new RectF(cx-s*.12f,cy-s*.32f,cx+s*.12f,cy+s*.09f),s*.12f,s*.12f,p);
-                c.drawArc(new RectF(cx-s*.23f,cy-s*.16f,cx+s*.23f,cy+s*.21f),0,180,false,p);
-                c.drawLine(cx,cy+s*.21f,cx,cy+s*.34f,p);c.drawLine(cx-s*.13f,cy+s*.34f,cx+s*.13f,cy+s*.34f,p);
             } else {
                 p.setStyle(Paint.Style.FILL);Path speaker=new Path();speaker.moveTo(cx-s*.31f,cy-s*.10f);speaker.lineTo(cx-s*.23f,cy-s*.10f);speaker.lineTo(cx-s*.08f,cy-s*.23f);speaker.lineTo(cx-s*.08f,cy+s*.23f);speaker.lineTo(cx-s*.23f,cy+s*.10f);speaker.lineTo(cx-s*.31f,cy+s*.10f);speaker.close();c.drawPath(speaker,p);
                 p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(s*.055f);

@@ -3,7 +3,7 @@ package com.camacho.rgbcontrol;
 /** Responsive icon-only TV controls, with a side layout for short/landscape windows. */
 public final class LgGeometry {
     public final float x,y,width,height,cx,cy,radius;
-    public final float[] centerX=new float[10],centerY=new float[10],keyWidth=new float[10],keyHeight=new float[10];
+    public final float[] centerX=new float[9],centerY=new float[9],keyWidth=new float[9],keyHeight=new float[9];
     public LgGeometry(int screenWidth,int screenHeight,int left,int top,int right,int bottom) {
         x=left;y=top;width=Math.max(1,screenWidth-left-right);height=Math.max(1,screenHeight-top-bottom);
         boolean landscape=width>height*1.2f;
@@ -18,8 +18,7 @@ public final class LgGeometry {
         key(3,cx-radius*.72f,cy,radius*.48f,radius*.84f);key(4,cx+radius*.72f,cy,radius*.48f,radius*.84f);
         key(6,x+width*(landscape ? .88f:.25f),y+height*(landscape ? .29f:.795f),volume,volume);
         key(7,x+width*(landscape ? .88f:.75f),y+height*(landscape ? .72f:.795f),volume,volume);
-        key(8,x+width*(landscape ? .125f:.32f),y+height*(landscape ? .62f:.94f),small,small);
-        key(9,x+width*(landscape ? .125f:.68f),y+height*(landscape ? .86f:.94f),small,small);
+        key(8,x+width*(landscape ? .125f:.50f),y+height*(landscape ? .62f:.94f),small,small);
     }
     private void key(int i,float cx,float cy,float w,float h) { centerX[i]=cx;centerY[i]=cy;keyWidth[i]=w;keyHeight[i]=h; }
     public int left(int i) { return Math.round(centerX[i]-keyWidth[i]/2); }
