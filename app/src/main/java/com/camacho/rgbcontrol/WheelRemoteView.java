@@ -37,7 +37,8 @@ public final class WheelRemoteView extends ViewGroup {
         white=button("WHITE",Color.WHITE,0xFF141820,Color.WHITE,true);
         white.setContentDescription("Luz blanca"); white.setOnClickListener(v->listener.onPress(7));
         tv=button("TV",Color.WHITE,0xFF141820,Color.WHITE,true);
-        tv.setContentDescription("TV, reservado, sin función por ahora"); tv.setEnabled(false);
+        tv.setContentDescription("Abrir control del televisor LG");
+        tv.setOnClickListener(v->{ stopInteraction(); getContext().startActivity(new android.content.Intent(getContext(),LgActivity.class)); });
         wheel=new ColourWheel(context,listener); addView(wheel);
     }
     private Button button(String label,int fill,int text,int border,boolean oval) {

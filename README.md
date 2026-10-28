@@ -1,19 +1,36 @@
-# CAMACHO RGB CONTROL · rueda táctil LED
+# CAMACHO RGB CONTROL · luces y TV LG
 
-Versión 4.0, versionCode 5. Pantalla oscura basada en la referencia del usuario: brillo a ambos lados de OFF/ON, rueda de colores grande, FLASH/STROBE/FADE/SMOOTH, WHITE y TV. El botón TV se muestra sin función y no emite señales.
+Versión 5.0 (versionCode 6). El botón TV de la rueda LED abre una segunda pantalla basada en la referencia del usuario: fondo oscuro, controles en cian, encendido, flechas, OK, volumen y silencio. Atrás de Android vuelve al control de luces. La rueda LED, sus códigos y la frecuencia de 40 kHz se conservan.
 
-## Uso
+## TV por infrarrojo
 
-Apuntá el emisor del teléfono al receptor de la tira LED. Tocá o deslizá el dedo por el aro de color para cambiar la luz. El marcador muestra la posición del dedo. El receptor utiliza los 15 colores del mando IR original: se envía el color disponible más cercano, no RGB arbitrario de 24 bits. El centro oscuro no es una segunda zona de selección.
+Los nueve botones usan el juego común LG NEC (bytes de dirección 04 FB) a 38 kHz. La potencia es un conmutador encendido/apagado. Volumen y flechas repiten mientras se mantienen pulsados. Requiere emisor IR accesible y apuntar al receptor. La tabla es un candidato LG habitual; confirmar con el televisor real antes de afirmar compatibilidad específica. No se envían códigos de servicio.
 
-OFF, ON, WHITE y los cuatro efectos conservan los comandos de la versión anterior. Los iconos de sol permiten bajar o subir brillo; mantenerlos pulsados repite el ajuste. Se usa F7 a 40 kHz, que el usuario ya confirmó con su tira LED. Se respetan los códigos individuales previamente guardados si se actualiza sin borrar datos.
+## Puntero por movimiento (experimental)
 
-Los envíos son secuenciales, limitados a aproximadamente uno cada 120 ms. Si el gesto produce cambios más rápido, se conserva únicamente el comando más reciente para terminar en el último color elegido, sin acumular una cola de colores antiguos. Al salir se descartan los comandos pendientes y se detiene la repetición de brillo. Una señal en curso puede terminar.
+1. Encendé la TV y conectá teléfono y TV a la misma red Wi-Fi.
+2. En el control LG, mantené OK pulsado para abrir la configuración.
+3. Ingresá la dirección IPv4 privada de tu TV (se ve en sus ajustes de red) y tocá Conectar.
+4. La primera vez, confirmá que la IP corresponde a tu TV y aceptá su certificado local. La app recuerda su huella únicamente para esa IP; si cambia, vuelve a pedir confirmación. Luego aceptá la solicitud de vinculación que aparece en la TV.
+5. Si webOS concede la conexión y el teléfono tiene giroscopio, aparece un punto verde y se activa el movimiento. Mové suavemente el teléfono; OK hace clic con el puntero. Las flechas siguen funcionando como navegación convencional.
+6. Mantené OK pulsado y elegí Desactivar para volver a navegación normal. Al salir de la pantalla LG o poner la app en segundo plano, sensores y conexiones se detienen. No se reactiva automáticamente: volvé a Conectar cuando lo necesites.
 
-La interfaz se adapta al área disponible y respeta los márgenes del sistema. Admite navegación por teclado en la rueda y etiquetas accesibles. La aplicación no recibe información de las luces: el marcador y los botones no confirman el estado físico del receptor.
+Esta función usa el protocolo local de webOS por WSS en el puerto 3001 y su socket de entrada. No imita el emparejamiento Bluetooth ni la radio del Magic Remote. Requiere webOS y permisos compatibles con el modelo/firmware; no es compatible con todos los televisores LG ni con NetCast. No hay búsqueda automática de TV, fallback a conexiones sin cifrar, voz, micrófono ni funciones de servicio.
 
-## APK y validación
+El giroscopio mide los movimientos y el acelerómetro ayuda a compensar la inclinación lateral. Se filtra el ruido y se limitan los desplazamientos. Si no existe giroscopio, la app lo informa y mantiene los botones IR. No se guarda un historial de sensores ni se envían datos a servidores externos. Solo se conecta a la IP privada que ingresa el usuario; la primera vinculación y los cambios de certificado requieren confirmación. La clave de vinculación se guarda en las preferencias privadas de la app.
 
-Actions → Compilar APK LED → ejecución exitosa → artefacto CAMACHO-RGB-CONTROL-LED → extraer app-debug.apk. El workflow ejecuta pruebas NEC, geometría y selección de la rueda, seguidas de assembleDebug y lintDebug. Requiere Java 17 / Gradle 8.9 / AGP 8.7.3; Android 6 o posterior y emisor accesible a ConsumerIrManager.
+## Validación y compilación
 
-Para actualización estable se necesita una firma de lanzamiento permanente; las firmas de depuración pueden variar entre compilaciones. La respuesta final de los gestos, tamaño en pantalla y alcance se comprueban instalando el APK en el teléfono real.
+Actions → Compilar APK LED → ejecución exitosa → artefacto CAMACHO-RGB-CONTROL-LED. Extraé app-debug.apk para instalar. Java 17, Gradle 8.9, AGP 8.7.3, compileSdk/targetSdk 35, minSdk 23. Dependencia de transporte: Java-WebSocket 1.5.7 (MIT), con su dependencia de registro SLF4J.
+
+Las pruebas verifican pulsos NEC y LG, complementos, equivalencia MSB/LSB, rueda LED, dimensiones previas, validación de IP y conversión de movimiento. El workflow ejecuta assembleDebug y lintDebug. La vinculación real, permiso del socket de puntero, certificado del TV, sensibilidad de sensores y respuesta física requieren prueba en el teléfono y televisor del usuario. No se presume un modelo específico a partir de fotos de un anuncio de mandos.
+
+## Referencias primarias
+
+- LG: https://www.lg.com/us/support/help-library/lg-tv-how-to-set-up-the-lg-thinq-app-on-your-lg-smart-tv--20152745625356
+- API local webOS de Connect SDK (LG Electronics): https://github.com/ConnectSDK/Connect-SDK-Android-Core/blob/master/src/com/connectsdk/service/WebOSTVService.java
+- Formato del socket de puntero: https://github.com/ConnectSDK/Connect-SDK-Android-Core/blob/master/src/com/connectsdk/service/webos/WebOSTVMouseSocketConnection.java
+- Códigos LG: https://www.lg.com/us/business/download/resources/BT00001837/206-4322_EV960H_Comm_Mode_Setup_Rev_C.pdf
+- Transporte: https://github.com/TooTallNate/Java-WebSocket
+
+El protocolo se implementa de forma independiente usando sus formatos públicos; no se copia código fuente de Connect SDK en la aplicación. Java-WebSocket se integra como dependencia MIT. La instalación de un APK de depuración puede requerir desinstalar la versión anterior si su firma difiere (se borran los datos locales).

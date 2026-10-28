@@ -1,9 +1,7 @@
-# Validación de la rueda LED 4.0
+# Validación 5.0
 
-Se conserva IrCodes y el perfil F7 a 40 kHz que el usuario confirmó físicamente. Se sustituye el mando de 24 círculos por la referencia nueva: aro de colores táctil, brillo, encendido, apagado, efectos y blanco. TV no tiene acción.
+Se conserva el control LED previamente probado. TV ahora abre un control LG con nueve acciones IR comunes. El puntero por movimiento es opcional y experimental, requiere giroscopio, webOS, red local, certificado aceptado por el usuario y autorización en la pantalla de la TV. No hay emulación Bluetooth/RF.
 
-WheelPaletteTest recorre ángulos positivos y negativos, verifica los sectores de la referencia, la interpolación circular corta, el rango de matiz y que los 15 comandos de color resultan accesibles sin emitir comandos de efectos o alimentación desde la rueda. Las pruebas NEC existentes siguen verificando los pulsos y complementos.
+Pruebas automáticas: NEC y complementos, equivalencia de potencia y volumen LG con códigos MSB conocidos, validación de IP privada (rechazo de hosts públicos, localhost, direcciones inválidas y URLs), integración del giroscopio (reposo, ruido, ejes, compensación de inclinación, límites y muestras obsoletas), rueda LED y pruebas de geometría existentes. Compilación y Lint mediante GitHub Actions.
 
-La emisión conserva únicamente el último comando pendiente durante un envío; mantiene una separación mínima aproximada de 120 ms entre comienzos. Se detiene la repetición de brillo al salir de la actividad. No se agrega acceso a red ni permisos adicionales.
-
-Pendiente de prueba física de esta versión: respuesta a arrastre lento y rápido, color final al levantar el dedo, brillo mantenido, disposición en el teléfono del usuario y botón TV sin acción. El estado visible no es confirmación recibida de las luces.
+Validación física pendiente: todas las teclas LG en el modelo real; emparejamiento WSS y permisos webOS; certificado presentado por la TV; conexión al socket de puntero; movimiento, sensibilidad, inclinación, clic y parada al salir. No se afirma compatibilidad garantizada ni que los sensores solos permitan controlar un TV sin conexión de datos.
