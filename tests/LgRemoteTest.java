@@ -22,6 +22,9 @@ public final class LgRemoteTest {
         int[] fast=m.step(100,100,0,.05);check(Math.abs(fast[0])<=45 && Math.abs(fast[1])<=45,"bounded motion");
         check(Arrays.equals(m.step(1,1,0,2),new int[]{0,0}),"ignore stale sample");
         check(Arrays.equals(m.step(Double.NaN,0,0,.033),new int[]{0,0}),"invalid sensor sample");
+        m.reset();int[] flat=m.step3D(0,0,-1,0,0,9.81,.033);check(flat[0]>0 && flat[1]==0,"flat phone uses gyro Z for yaw");
+        m.reset();int[] upright=m.step3D(0,-1,0,0,9.81,0,.033);check(upright[0]>0 && upright[1]==0,"upright phone uses gyro Y for yaw");
+        check(Arrays.equals(m.step3D(0,0,0,0,0,0,.033),new int[]{0,0}),"invalid gravity");
         System.out.println("PASS: LG IR commands, TV destination validation and gyroscope motion integration");
     }
 }

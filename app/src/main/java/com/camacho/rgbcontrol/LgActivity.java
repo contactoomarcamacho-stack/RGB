@@ -16,7 +16,7 @@ public final class LgActivity extends Activity implements SensorEventListener {
     private ConsumerIrManager ir; private LgRemoteView remote; private boolean active,busy,moving;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private SensorManager sensors;private Sensor gyro,accel;private long lastSample;private double roll;
+    private SensorManager sensors;private Sensor gyro,accel;private long lastSample;private final double[] gravity={0,9.81,0};
     private final MotionMath math=new MotionMath();private WebOsPointer pointer;private SharedPreferences prefs;private TextView connectionStatus;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);ir=(ConsumerIrManager)getSystemService(Context.CONSUMER_IR_SERVICE);
@@ -75,7 +75,7 @@ public final class LgActivity extends Activity implements SensorEventListener {
         }));dialog.show();
     }
     private void startMotion() {
-        if(gyro==null || !active)return;math.reset();lastSample=0;roll=0;
+        if(gyro==null || !active)return;math.reset();lastSample=0;gravity[0]=0;gravity[1]=9.81;gravity[2]=0;
         moving=sensors.registerListener(this,gyro,SensorManager.SENSOR_DELAY_GAME);
         if(accel!=null)sensors.registerListener(this,accel,SensorManager.SENSOR_DELAY_UI);
         remote.setMotion(moving);if(!moving)toast("El teléfono no pudo iniciar el giroscopio");
@@ -84,14 +84,14 @@ public final class LgActivity extends Activity implements SensorEventListener {
     @Override public void onSensorChanged(SensorEvent event) {
         if(!active || !moving || !pointer.isReady())return;
         if(event.sensor.getType()==Sensor.TYPE_ACCELEROMETER) {
-            if(Math.hypot(event.values[0],event.values[1])>3)roll=roll*.85+Math.atan2(event.values[0],event.values[1])*.15;
+            for(int i=0;i<3;i++)gravity[i]=gravity[i]*.85+event.values[i]*.15;
             return;
         }
         if(event.sensor.getType()!=Sensor.TYPE_GYROSCOPE)return;
         if(lastSample==0) { lastSample=event.timestamp;return; }
         double seconds=(event.timestamp-lastSample)*1e-9;
         if(seconds<.032)return;lastSample=event.timestamp;
-        int[] delta=math.step(event.values[0],event.values[1],roll,seconds);pointer.move(delta[0],delta[1]);
+        int[] delta=math.step3D(event.values[0],event.values[1],event.values[2],gravity[0],gravity[1],gravity[2],seconds);pointer.move(delta[0],delta[1]);
     }
     @Override public void onAccuracyChanged(Sensor sensor,int accuracy) { }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
