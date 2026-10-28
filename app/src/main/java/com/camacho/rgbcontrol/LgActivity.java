@@ -3,6 +3,10 @@ package com.camacho.rgbcontrol;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.speech.RecognizerIntent;
+import java.util.ArrayList;
 import android.content.SharedPreferences;
 import android.hardware.*;
 import android.os.*;
@@ -13,6 +17,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class LgActivity extends Activity implements SensorEventListener {
+    private static final int VOICE_REQUEST=700;
+    private boolean voiceLaunching,voiceReturned,reconnectAfterVoice;
+    private int voicePending=-1;
     private ConsumerIrManager ir; private LgRemoteView remote; private boolean active,busy,moving;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -25,6 +32,7 @@ public final class LgActivity extends Activity implements SensorEventListener {
         remote=new LgRemoteView(this,new LgRemoteView.Listener() {
             public void press(int action) { send(action); }
             public void configurePointer() { configure(); }
+            public void voice() { startVoice(); }
         });
         remote.setOnApplyWindowInsetsListener((v,insets)->{remote.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
         setContentView(remote);
@@ -40,7 +48,6 @@ public final class LgActivity extends Activity implements SensorEventListener {
             }
         });
         fullscreen();
-        if(!prefs.getBoolean("hint-shown",false)) { Toast.makeText(this,"Mantené OK pulsado para configurar el puntero por movimiento. Atrás vuelve a las luces.",Toast.LENGTH_LONG).show();prefs.edit().putBoolean("hint-shown",true).apply(); }
     }
     private void fullscreen() { getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION); }
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus);if(focus)fullscreen(); }
@@ -59,11 +66,45 @@ public final class LgActivity extends Activity implements SensorEventListener {
             handler.postDelayed(()->{busy=false;if(active && !isDestroyed() && error!=null)toast(error);},50);
         });
     }
+    private void startVoice() {
+        if(!active || voiceLaunching)return;
+        remote.stopInteraction();
+        Intent request=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        request.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        request.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"es-UY");
+        request.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
+        reconnectAfterVoice=moving;
+        try { voiceLaunching=true;startActivityForResult(request,VOICE_REQUEST); }
+        catch(ActivityNotFoundException ex) { voiceLaunching=false;reconnectAfterVoice=false;toast("Activá o instalá un servicio de reconocimiento de voz de Android"); }
+        catch(SecurityException ex) { voiceLaunching=false;reconnectAfterVoice=false;toast("El servicio de voz no permite acceder al micrófono"); }
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=VOICE_REQUEST)return;
+        voiceLaunching=false;voiceReturned=true;voicePending=-1;
+        if(resultCode==RESULT_OK && data!=null) {
+            ArrayList<String> phrases=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if(phrases!=null && !phrases.isEmpty()) {
+                voicePending=VoiceCommands.parse(phrases.get(0));
+                if(voicePending<0)toast("No reconocí una orden del control de TV");
+            }
+        }
+        if(active)consumeVoice();
+    }
+    private void consumeVoice() {
+        if(!voiceReturned)return;
+        voiceReturned=false;int action=voicePending;voicePending=-1;
+        if(action>=0)send(action);
+        if(reconnectAfterVoice) {
+            reconnectAfterVoice=false;String host=prefs.getString("host","");
+            if(LocalTvAddress.valid(host))pointer.connect(host);
+        }
+    }
     private void configure() {
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);int pad=Math.round(18*getResources().getDisplayMetrics().density);box.setPadding(pad,pad,pad,pad);
         TextView info=new TextView(this);info.setText("Puntero experimental para LG webOS. Teléfono y TV deben estar en la misma red Wi-Fi. Encendé la TV, ingresá su IP local y aceptá la solicitud en su pantalla. No empareja por Bluetooth ni RF.");box.addView(info);
         EditText address=new EditText(this);address.setSingleLine(true);address.setInputType(InputType.TYPE_CLASS_PHONE);address.setHint("192.168.1.20");address.setText(prefs.getString("host",""));box.addView(address);
-        connectionStatus=new TextView(this);connectionStatus.setText(gyro==null ? "No se detectó giroscopio: el puntero por movimiento no está disponible en este dispositivo." : moving ? "Puntero activo. Mantené el teléfono estable y movelo suavemente; OK hace clic." : "Giroscopio detectado. Compatibilidad pendiente de vincular con tu TV.");box.addView(connectionStatus);
+        connectionStatus=new TextView(this);connectionStatus.setText(gyro==null ? "No se detectó giroscopio: el puntero por movimiento no está disponible en este dispositivo." : moving ? "Puntero activo. Mantené el teléfono estable y movelo suavemente; el botón central hace clic." : "Giroscopio detectado. Compatibilidad pendiente de vincular con tu TV.");box.addView(connectionStatus);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Puntero por movimiento")
             .setView(box).setPositiveButton("Conectar",null).setNeutralButton("Desactivar",(d,w)->{stopMotion();pointer.close();})
             .setNegativeButton("Cerrar",null).create();
@@ -95,7 +136,7 @@ public final class LgActivity extends Activity implements SensorEventListener {
     }
     @Override public void onAccuracyChanged(Sensor sensor,int accuracy) { }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
-    @Override protected void onResume() { super.onResume();active=true; }
+    @Override protected void onResume() { super.onResume();active=true;consumeVoice(); }
     @Override protected void onPause() { active=false;remote.stopInteraction();stopMotion();if(pointer!=null)pointer.close();super.onPause(); }
     @Override protected void onDestroy() { if(pointer!=null)pointer.close();worker.shutdown();super.onDestroy(); }
 }
