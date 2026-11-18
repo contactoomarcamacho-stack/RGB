@@ -11,6 +11,15 @@ public final class LgRemoteTest {
         check(Arrays.equals(IrCodes.pattern(LgCodes.frame(0),false),IrCodes.pattern(0x20DF10EFL,true)),"LG power MSB/LSB equivalence");
         check(Arrays.equals(IrCodes.pattern(LgCodes.frame(6),false),IrCodes.pattern(0x20DF40BFL,true)),"volume up equivalence");
         for(int i=0;i<9;i++) { long frame=LgCodes.frame(i);check((frame>>>16)==0x04FB,"separate LG address");check((((frame>>>8)^frame)&255)==255,"command complement"); }
+        check(LgCodes.frame(LgCodes.INPUT_MENU)==0x04FB0BF4L,"Input/source LG NEC");
+        check(LgCodes.frame(LgCodes.HOME)==0x04FB7C83L,"Home LG NEC");
+        check(LgCodes.frame(LgCodes.BACK)==0x04FB28D7L,"Back LG NEC");
+        check(LgCodes.frame(LgCodes.HDMI_1)==0x04FBCE31L,"HDMI 1 LG NEC");
+        check(LgCodes.frame(LgCodes.HDMI_2)==0x04FB916EL,"HDMI 2 LG NEC");
+        check(LgCodes.frame(LgCodes.HDMI_3)==0x04FBD02FL,"HDMI 3 LG NEC");
+        boolean requiresWifi=false;
+        try { LgCodes.frame(LgCodes.YOUTUBE_ADFREE); } catch(IllegalArgumentException expected) { requiresWifi=true; }
+        check(requiresWifi,"AdFree must never transmit bogus IR");
         check(LocalTvAddress.valid("192.168.1.20") && LocalTvAddress.valid("10.0.0.2") && LocalTvAddress.valid("172.31.2.3"),"private addresses accepted");
         for(String value:new String[]{"8.8.8.8","127.0.0.1","169.254.1.1","192.168.1.255","172.32.0.1","192.168.1.999","example.com","https://192.168.1.2","192.168.01.1","192.168.1.2:3001"}) check(!LocalTvAddress.valid(value),"invalid TV destination: "+value);
         MotionMath m=new MotionMath();

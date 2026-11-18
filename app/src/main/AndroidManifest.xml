@@ -11,6 +11,8 @@
 
     <application
         android:label="CAMACHO RGB CONTROL"
+        android:icon="@drawable/ic_rgh_tv"
+        android:roundIcon="@drawable/ic_rgh_tv"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
 

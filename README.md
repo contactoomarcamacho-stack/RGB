@@ -1,5 +1,17 @@
 # CAMACHO RGB CONTROL · luces y TV LG
 
+## Versión 5.3: fuentes HDMI, aplicaciones y YouTube AdFree
+En la pantalla LG se agregaron cuatro controles visibles: HDMI (menú con HDMI 1, HDMI 2, HDMI 3, selector nativo y configuración Wi-Fi), APPS (Home), ATRÁS y AdFree. Los botones HDMI usan códigos infrarrojos LG de entrada directa cuando no está vinculado por Wi-Fi. Si el modelo no soporta esas teclas directas, en el mismo menú se puede abrir el selector de la TV y recorrerlo con las flechas y OK. Home y Back funcionan por IR, sin Wi-Fi.
+
+La vinculación webOS por Wi-Fi requiere TV y celular en la misma red, dirección IP local y confirmación en la pantalla LG. Una vez conectado, HDMI 1-3 se seleccionan con `ssap://tv/switchInput` y AdFree envía `ssap://com.webos.applicationManager/launch` para el ID `youtube.leanback.v4` (utilizado por YouTube AdFree de webOS Homebrew). El ID también puede corresponder al YouTube oficial en TVs sin el reemplazo: la app abrirá lo que realmente tenga instalado la TV. La vinculación Wi-Fi no exige giroscopio; el puntero sigue siendo opcional. La app no instala YouTube AdFree ni elimina publicidad por sí misma.
+
+El launcher Android ahora tiene icono vectorial RGH con una TV y un anillo de colores. Se mantiene sin cambios la lógica IR de luces y la base V2, incluyendo la frecuencia RGB de 40 kHz.
+
+## Validación
+`tests/run.sh` verifica códigos LG, botones nuevos, geometría en múltiples resoluciones y la codificación de infrarrojo. La respuesta real de una TV LG y la instalación de AdFree deben comprobarse en el dispositivo. Fuentes: LG IR (Home Assistant infrared-protocols), webOSbrew/youtube-webos y Connect SDK.
+
+# CAMACHO RGB CONTROL · luces y TV LG
+
 Versión 5.2 (versionCode 8). El botón TV de la rueda LED abre una segunda pantalla basada en la referencia del usuario: fondo oscuro, controles en cian, encendido, flechas, confirmación, volumen, silencio. El mando LG no muestra títulos ni palabras: solo iconos. Las etiquetas para lectores de pantalla se conservan. Atrás de Android vuelve al control de luces. La rueda LED, sus códigos y la frecuencia de 40 kHz se conservan.
 
 ## TV por infrarrojo

@@ -12,14 +12,14 @@ import android.widget.Button;
 /** Dark, cyan LG remote matching the user's first reference. */
 public final class LgRemoteView extends ViewGroup {
     public interface Listener { void press(int action); void configurePointer(); }
-    private final Button[] keys=new Button[9];
+    private final Button[] keys=new Button[13];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Handler handler=new Handler(Looper.getMainLooper()); private Runnable repeat;
     private LgGeometry geometry;
     private float x,y,w,h,cx,cy,r; private boolean motion;
     public LgRemoteView(Context context,Listener listener) {
         super(context); setWillNotDraw(false); setBackgroundColor(0xFF151D27);
-        for(int i=0;i<9;i++) {
+        for(int i=0;i<13;i++) {
             final int action=i;
             Button b=new IconButton(context,i); keys[i]=b;
             b.setContentDescription(LgCodes.LABELS[i]); b.setBackgroundColor(Color.TRANSPARENT);
@@ -49,10 +49,10 @@ public final class LgRemoteView extends ViewGroup {
         int width=MeasureSpec.getSize(widthSpec),height=MeasureSpec.getSize(heightSpec); setMeasuredDimension(width,height);
         geometry=new LgGeometry(width,height,getPaddingLeft(),getPaddingTop(),getPaddingRight(),getPaddingBottom());
         x=geometry.x;y=geometry.y;w=geometry.width;h=geometry.height;cx=geometry.cx;cy=geometry.cy;r=geometry.radius;
-        for(int i=0;i<9;i++)size(keys[i],geometry.keyWidth[i],geometry.keyHeight[i]);
+        for(int i=0;i<13;i++)size(keys[i],geometry.keyWidth[i],geometry.keyHeight[i]);
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
-        for(int i=0;i<9;i++) {
+        for(int i=0;i<13;i++) {
             int x=geometry.left(i),y=geometry.top(i);keys[i].layout(x,y,x+keys[i].getMeasuredWidth(),y+keys[i].getMeasuredHeight());
         }
     }
@@ -90,6 +90,35 @@ public final class LgRemoteView extends ViewGroup {
                 Path path=new Path();path.moveTo(-s*.18f,s*.08f);path.lineTo(0,-s*.10f);path.lineTo(s*.18f,s*.08f);c.drawPath(path,p);c.restore();
             } else if(action==5) {
                 Path check=new Path();check.moveTo(cx-s*.20f,cy);check.lineTo(cx-s*.04f,cy+s*.15f);check.lineTo(cx+s*.23f,cy-s*.17f);c.drawPath(check,p);
+            } else if(action>=9) {
+                float corner=Math.min(w,h)*.18f;
+                p.setStyle(Paint.Style.FILL);p.setColor(isPressed()?0xFF315B69:0xFF203540);
+                c.drawRoundRect(new RectF(w*.025f,h*.06f,w*.975f,h*.94f),corner,corner,p);
+                p.setColor(action==12?0xFFE95B63:0xFF53DFDD);
+                p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Math.max(2,s*.045f));
+                float iconY=h*.40f,iconSize=Math.min(w*.18f,h*.22f);
+                if(action==9) {
+                    c.drawRoundRect(new RectF(cx-iconSize,iconY-iconSize*.60f,cx+iconSize,iconY+iconSize*.60f),3,3,p);
+                    c.drawLine(cx,iconY+iconSize*.60f,cx,iconY+iconSize,p);
+                } else if(action==10) {
+                    Path home=new Path();home.moveTo(cx-iconSize,iconY);home.lineTo(cx,iconY-iconSize);home.lineTo(cx+iconSize,iconY);
+                    home.moveTo(cx-iconSize*.72f,iconY-iconSize*.05f);home.lineTo(cx-iconSize*.72f,iconY+iconSize);
+                    home.lineTo(cx+iconSize*.72f,iconY+iconSize);home.lineTo(cx+iconSize*.72f,iconY-iconSize*.05f);c.drawPath(home,p);
+                } else if(action==11) {
+                    Path back=new Path();back.moveTo(cx+iconSize,iconY-iconSize*.6f);back.lineTo(cx-iconSize*.6f,iconY-iconSize*.6f);
+                    back.lineTo(cx,iconY-iconSize*1.15f);back.moveTo(cx-iconSize*.6f,iconY-iconSize*.6f);
+                    back.lineTo(cx,iconY+iconSize*.05f);c.drawPath(back,p);
+                } else {
+                    p.setStyle(Paint.Style.FILL);
+                    c.drawRoundRect(new RectF(cx-iconSize*1.25f,iconY-iconSize*.70f,cx+iconSize*1.25f,iconY+iconSize*.70f),iconSize*.3f,iconSize*.3f,p);
+                    p.setColor(Color.WHITE);Path play=new Path();play.moveTo(cx-iconSize*.24f,iconY-iconSize*.41f);
+                    play.lineTo(cx+iconSize*.45f,iconY);play.lineTo(cx-iconSize*.24f,iconY+iconSize*.41f);play.close();c.drawPath(play,p);
+                }
+                p.setStyle(Paint.Style.FILL);p.setColor(Color.WHITE);
+                p.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+                p.setTextAlign(Paint.Align.CENTER);p.setTextSize(Math.min(w*.145f,h*.245f));
+                String text=action==9?"HDMI":action==10?"APPS":action==11?"ATRÁS":"AdFree";
+                c.drawText(text,cx,h*.80f,p);
             } else {
                 p.setStyle(Paint.Style.FILL);Path speaker=new Path();speaker.moveTo(cx-s*.31f,cy-s*.10f);speaker.lineTo(cx-s*.23f,cy-s*.10f);speaker.lineTo(cx-s*.08f,cy-s*.23f);speaker.lineTo(cx-s*.08f,cy+s*.23f);speaker.lineTo(cx-s*.23f,cy+s*.10f);speaker.lineTo(cx-s*.31f,cy+s*.10f);speaker.close();c.drawPath(speaker,p);
                 p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(s*.055f);

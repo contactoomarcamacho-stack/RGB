@@ -21,9 +21,26 @@ public final class WebOsPointer {
     private final Handler main=new Handler(Looper.getMainLooper());
     private volatile int generation;
     private volatile WebSocketClient control,pointer;
+    private volatile boolean controlReady;
     private volatile String candidate;
     public WebOsPointer(SharedPreferences prefs,Listener listener) { this.prefs=prefs;this.listener=listener; }
     public boolean isReady() { WebSocketClient socket=pointer;return socket!=null && socket.isOpen(); }
+    public boolean isControlReady() { WebSocketClient socket=control;return controlReady && socket!=null && socket.isOpen(); }
+    private boolean request(String id,String uri,JSONObject payload) {
+        WebSocketClient ws=control;if(!isControlReady() || ws==null)return false;
+        try {
+            JSONObject message=new JSONObject().put("type","request").put("id",id).put("uri",uri).put("payload",payload);
+            ws.send(message.toString());return true;
+        } catch(Exception ex) { post(generation,()->listener.status("No se pudo enviar la orden a la TV"));return false; }
+    }
+    public boolean switchHdmi(int number) {
+        if(number<1 || number>3)return false;
+        return request("hdmi"+number,"ssap://tv/switchInput",new JSONObject(java.util.Collections.singletonMap("inputId","HDMI_"+number)));
+    }
+    public boolean launchAdFree() {
+        return request("youtubeAdFree","ssap://com.webos.applicationManager/launch",
+            new JSONObject(java.util.Collections.singletonMap("id","youtube.leanback.v4")));
+    }
     public void connect(String host) {
         close();
         if(!LocalTvAddress.valid(host)) { listener.status("Ingresá la IP local de la TV, por ejemplo 192.168.1.20");return; }
@@ -50,7 +67,7 @@ public final class WebOsPointer {
                 if(mouse) { post(session,()->{listener.status("Puntero Wi-Fi conectado");listener.ready();});return; }
                 try {
                     JSONObject manifest=new JSONObject().put("manifestVersion",1).put("appVersion","5.0")
-                        .put("permissions",new JSONArray(new String[]{"CONTROL_INPUT_JOYSTICK","CONTROL_MOUSE_AND_KEYBOARD","CONTROL_INPUT_TEXT"}));
+                        .put("permissions",new JSONArray(new String[]{"CONTROL_INPUT_JOYSTICK","CONTROL_MOUSE_AND_KEYBOARD","CONTROL_INPUT_TEXT","LAUNCH","LAUNCH_WEBAPP","READ_INSTALLED_APPS","CONTROL_INPUT_TV"}));
                     JSONObject payload=new JSONObject().put("pairingType","PROMPT").put("forcePairing",false).put("manifest",manifest);
                     String key=prefs.getString("key-"+host,"");if(!key.isEmpty())payload.put("client-key",key);
                     send(new JSONObject().put("type","register").put("id","register").put("payload",payload).toString());
@@ -62,22 +79,40 @@ public final class WebOsPointer {
                 try {
                     JSONObject data=new JSONObject(message);String type=data.optString("type");JSONObject payload=data.optJSONObject("payload");
                     if("registered".equals(type)) {
+                        controlReady=true;
+                        post(session,()->listener.status("TV vinculada por Wi-Fi. HDMI y YouTube AdFree disponibles."));
                         if(payload!=null && payload.has("client-key"))prefs.edit().putString("key-"+host,payload.getString("client-key")).apply();
                         send(new JSONObject().put("type","request").put("id","pointer").put("uri","ssap://com.webos.service.networkinput/getPointerInputSocket").toString());
                     } else if("response".equals(type) && "pointer".equals(data.optString("id")) && payload!=null) {
                         URI path=new URI(payload.getString("socketPath"));
                         if(pointer!=null)pointer.close();pointer=socket(path,host,session,true);pointer.connect();
-                    } else if("error".equals(type)) post(session,()->{WebOsPointer.this.close();listener.status("webOS rechazó el control del puntero. Puede requerir otra configuración o no ser compatible con este modelo.");});
+                    } else if("response".equals(type) || "error".equals(type)) {
+                        String id=data.optString("id");
+                        if("pointer".equals(id)) {
+                            post(session,()->listener.status("El puntero no está disponible en esta TV. HDMI y apps siguen habilitados."));
+                        } else if("youtubeAdFree".equals(id) || id.startsWith("hdmi")) {
+                            boolean ok="response".equals(type) && payload!=null && payload.optBoolean("returnValue",false);
+                            String operation="youtubeAdFree".equals(id)?"YouTube AdFree":id.toUpperCase(java.util.Locale.ROOT);
+                            String message=ok?("Orden enviada: "+operation):("La TV no aceptó "+operation+". Revisá la aplicación o los permisos webOS.");
+                            post(session,()->listener.status(message));
+                        } else if("error".equals(type)) {
+                            post(session,()->listener.status("La TV rechazó una orden. Revisá los permisos de vinculación."));
+                        }
+                    }
                 } catch(Exception ex) { post(session,()->{WebOsPointer.this.close();listener.status("La respuesta de la TV no permite abrir un puntero compatible");}); }
             }
             @Override public void onClose(int code,String reason,boolean remote) {
-                post(session,()->{WebOsPointer.this.close();listener.status("Puntero desconectado. Los botones infrarrojos siguen disponibles.");});
+                post(session,()->{
+                    if(mouse) { pointer=null;listener.status("Puntero desconectado. La conexión Wi-Fi sigue disponible."); }
+                    else { WebOsPointer.this.close();listener.status("TV desconectada. Los botones infrarrojos siguen disponibles."); }
+                });
             }
             @Override public void onError(Exception ex) {
                 post(session,()->{
+                    if(mouse) { pointer=null;listener.status("Puntero no disponible. HDMI y aplicaciones siguen disponibles por Wi-Fi.");return; }
                     String fingerprint=candidate;WebOsPointer.this.close();
                     if(fingerprint!=null)listener.certificate(host,fingerprint);
-                    else listener.status("No se pudo conectar el puntero. Revisá la IP, el Wi-Fi y que la TV tenga webOS compatible.");
+                    else listener.status("No se pudo conectar a la TV. Revisá la IP, el Wi-Fi y que la TV tenga webOS compatible.");
                 });
             }
         };
@@ -109,7 +144,7 @@ public final class WebOsPointer {
         try { ws.send("type:click\n\n");return true; } catch(RuntimeException ex) { return false; }
     }
     public void close() {
-        generation++;WebSocketClient p=pointer,c=control;pointer=null;control=null;
+        generation++;controlReady=false;WebSocketClient p=pointer,c=control;pointer=null;control=null;
         if(p!=null)p.close();if(c!=null)c.close();
     }
 }
