@@ -49,7 +49,7 @@ public final class WebOsPointer {
             control=socket(new URI("wss://"+host+":3001/"),host,session,false);
             listener.status("Conectando con la TV…");control.connect();
             main.postDelayed(()->{
-                if(session==generation && !isReady()) { close();listener.status("La TV no completó la vinculación. Revisá webOS, la IP, el Wi-Fi y la autorización en pantalla."); }
+                if(session==generation && !isControlReady()) { close();listener.status("La TV no completó la vinculación. Revisá webOS, la IP, el Wi-Fi y la autorización en pantalla."); }
             },45000);
         } catch(Exception ex) { listener.status("No se pudo iniciar la conexión con la TV"); }
     }
