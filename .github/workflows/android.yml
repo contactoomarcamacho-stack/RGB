@@ -1,32 +1,42 @@
-name: Compilar APK
+name: Compilar APK LED
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Descargar proyecto
         uses: actions/checkout@v4
-
       - name: Instalar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Preparar Gradle
+      - name: Verificar códigos NEC
+        run: sh tests/run.sh
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Preparar Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Compilar APK
-        run: gradle assembleDebug --stacktrace
-
-      - name: Guardar APK
+        with:
+          gradle-version: '8.9'
+      - name: Compilar y revisar APK
+        run: gradle assembleDebug lintDebug --stacktrace
+      - name: Guardar APK LED
         uses: actions/upload-artifact@v4
         with:
-          name: CAMACHO-RGB-CONTROL
-          path: app/build/outputs/apk/debug/*.apk
+          name: CAMACHO-RGB-CONTROL-LED
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
