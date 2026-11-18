@@ -93,8 +93,8 @@ public final class WebOsPointer {
                         } else if("youtubeAdFree".equals(id) || id.startsWith("hdmi")) {
                             boolean ok="response".equals(type) && payload!=null && payload.optBoolean("returnValue",false);
                             String operation="youtubeAdFree".equals(id)?"YouTube AdFree":id.toUpperCase(java.util.Locale.ROOT);
-                            String message=ok?("Orden enviada: "+operation):("La TV no aceptó "+operation+". Revisá la aplicación o los permisos webOS.");
-                            post(session,()->listener.status(message));
+                            String resultMessage=ok?("Orden enviada: "+operation):("La TV no aceptó "+operation+". Revisá la aplicación o los permisos webOS.");
+                            post(session,()->listener.status(resultMessage));
                         } else if("error".equals(type)) {
                             post(session,()->listener.status("La TV rechazó una orden. Revisá los permisos de vinculación."));
                         }
