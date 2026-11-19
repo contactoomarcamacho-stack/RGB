@@ -16,7 +16,7 @@ import javax.net.ssl.*;
 
 /** Optional local webOS pointer connection. No Bluetooth/RF impersonation. */
 public final class WebOsPointer {
-    public interface Listener { void status(String message); void certificate(String host,String fingerprint); void ready(); }
+    public interface Listener { void status(String message); void certificate(String host,String fingerprint); void ready(); void connected(); void connectionFailed(String host); }
     private final SharedPreferences prefs; private final Listener listener;
     private final Handler main=new Handler(Looper.getMainLooper());
     private volatile int generation;
@@ -49,7 +49,11 @@ public final class WebOsPointer {
             control=socket(new URI("wss://"+host+":3001/"),host,session,false);
             listener.status("Conectando con la TV…");control.connect();
             main.postDelayed(()->{
-                if(session==generation && !isControlReady()) { close();listener.status("La TV no completó la vinculación. Revisá webOS, la IP, el Wi-Fi y la autorización en pantalla."); }
+                if(session==generation && !isControlReady()) {
+                    WebOsPointer.this.close();
+                    listener.status("La TV no completó la conexión. Revisá la red y autorizá el control en pantalla.");
+                    listener.connectionFailed(host);
+                }
             },45000);
         } catch(Exception ex) { listener.status("No se pudo iniciar la conexión con la TV"); }
     }
@@ -80,7 +84,7 @@ public final class WebOsPointer {
                     JSONObject data=new JSONObject(message);String type=data.optString("type");JSONObject payload=data.optJSONObject("payload");
                     if("registered".equals(type)) {
                         controlReady=true;
-                        post(session,()->listener.status("TV vinculada por Wi-Fi. HDMI y YouTube AdFree disponibles."));
+                        post(session,()->{listener.status("TV LG conectada.");listener.connected();});
                         if(payload!=null && payload.has("client-key"))prefs.edit().putString("key-"+host,payload.getString("client-key")).apply();
                         send(new JSONObject().put("type","request").put("id","pointer").put("uri","ssap://com.webos.service.networkinput/getPointerInputSocket").toString());
                     } else if("response".equals(type) && "pointer".equals(data.optString("id")) && payload!=null) {
@@ -112,7 +116,10 @@ public final class WebOsPointer {
                     if(mouse) { pointer=null;listener.status("Puntero no disponible. HDMI y aplicaciones siguen disponibles por Wi-Fi.");return; }
                     String fingerprint=candidate;WebOsPointer.this.close();
                     if(fingerprint!=null)listener.certificate(host,fingerprint);
-                    else listener.status("No se pudo conectar a la TV. Revisá la IP, el Wi-Fi y que la TV tenga webOS compatible.");
+                    else {
+                        listener.status("No se pudo conectar a la TV por Wi-Fi.");
+                        listener.connectionFailed(host);
+                    }
                 });
             }
         };
