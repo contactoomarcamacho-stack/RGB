@@ -117,7 +117,7 @@ public final class LgRemoteView extends ViewGroup {
                 p.setStyle(Paint.Style.FILL);p.setColor(Color.WHITE);
                 p.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
                 p.setTextAlign(Paint.Align.CENTER);p.setTextSize(Math.min(w*.145f,h*.245f));
-                String text=action==9?"HDMI":action==10?"APPS":action==11?"ATRÁS":"AdFree";
+                String text=action==9?"FUENTES":action==10?"APPS":action==11?"ATRÁS":"AdFree";
                 c.drawText(text,cx,h*.80f,p);
             } else {
                 p.setStyle(Paint.Style.FILL);Path speaker=new Path();speaker.moveTo(cx-s*.31f,cy-s*.10f);speaker.lineTo(cx-s*.23f,cy-s*.10f);speaker.lineTo(cx-s*.08f,cy-s*.23f);speaker.lineTo(cx-s*.08f,cy+s*.23f);speaker.lineTo(cx-s*.23f,cy+s*.10f);speaker.lineTo(cx-s*.31f,cy+s*.10f);speaker.close();c.drawPath(speaker,p);

@@ -1,55 +1,24 @@
-# CAMACHO RGB CONTROL · luces y TV LG
+# CAMACHO RGB CONTROL · versión 5.4
 
-## Versión 5.3: fuentes HDMI, aplicaciones y YouTube AdFree
-En la pantalla LG se agregaron cuatro controles visibles: HDMI (menú con HDMI 1, HDMI 2, HDMI 3, selector nativo y configuración Wi-Fi), APPS (Home), ATRÁS y AdFree. Los botones HDMI usan códigos infrarrojos LG de entrada directa cuando no está vinculado por Wi-Fi. Si el modelo no soporta esas teclas directas, en el mismo menú se puede abrir el selector de la TV y recorrerlo con las flechas y OK. Home y Back funcionan por IR, sin Wi-Fi.
+## TV LG · controles premium
+La pantalla LG conserva su control circular y añade el botón **FUENTES**.
+El selector ahora usa tarjetas grandes con iconos de cada dispositivo:
+- **TV BOX**, conectado al **HDMI 1**.
+- **HDMI 2**, entrada libre.
+- **PLAY 4**, conectado al **HDMI 3**.
 
-La vinculación webOS por Wi-Fi requiere TV y celular en la misma red, dirección IP local y confirmación en la pantalla LG. Una vez conectado, HDMI 1-3 se seleccionan con `ssap://tv/switchInput` y AdFree envía `ssap://com.webos.applicationManager/launch` para el ID `youtube.leanback.v4` (utilizado por YouTube AdFree de webOS Homebrew). El ID también puede corresponder al YouTube oficial en TVs sin el reemplazo: la app abrirá lo que realmente tenga instalado la TV. La vinculación Wi-Fi no exige giroscopio; el puntero sigue siendo opcional. La app no instala YouTube AdFree ni elimina publicidad por sí misma.
+Las tarjetas funcionan por IR usando los códigos directos LG existentes o por webOS con la TV vinculada. Si el modelo no admite selección directa, **TODAS LAS ENTRADAS** abre el selector nativo de la TV y permite moverse con flechas y OK. El diseño y los códigos de las luces RGB se conservan sin cambios.
 
-El launcher Android ahora tiene icono vectorial RGH con una TV y un anillo de colores. Se mantiene sin cambios la lógica IR de luces y la base V2, incluyendo la frecuencia RGB de 40 kHz.
+## YouTube AdFree: un toque, sin IP recurrente
+El botón AdFree abre el ID instalado `youtube.leanback.v4` de webOS. Se validó contra el repositorio público de YouTube AdFree (webOS Homebrew). Al abrir la pantalla de TV, la app intenta reconectarse en silencio a la IP y clave ya guardadas. Si se pulsa AdFree sin vinculación previa, la app busca la TV local mediante SSDP con el servicio `urn:lge-com:service:webos-second-screen:1`, sin pedir IP primero. Ante fallos de búsqueda, ofrece configurar la dirección manualmente una sola vez.
 
-## Validación
-`tests/run.sh` verifica códigos LG, botones nuevos, geometría en múltiples resoluciones y la codificación de infrarrojo. La respuesta real de una TV LG y la instalación de AdFree deben comprobarse en el dispositivo. Fuentes: LG IR (Home Assistant infrared-protocols), webOSbrew/youtube-webos y Connect SDK.
+**Importante:** El control directo de aplicaciones necesita TV LG webOS y teléfono en la misma red local. La primera conexión requiere autorizar el certificado de la TV y aprobar el control en la pantalla de la TV. No hay método IR universal que permita abrir cualquier aplicación arbitraria sin emparejamiento. Algunos routers bloquean SSDP, por lo que se mantiene la configuración manual como opción de respaldo. El ID de YouTube oficial puede coincidir con el de AdFree; la TV abrirá lo que tenga instalado.
 
-# CAMACHO RGB CONTROL · luces y TV LG
+## Verificación
+- Java 17, Android API 35.
+- `tests/run.sh` incluye códigos IR y geometría.
+- GitHub Actions ejecuta `assembleDebug lintDebug` y entrega APK.
+- Probar en el LG físico el cambio de HDMI, vinculación inicial, reconexión Wi-Fi y aplicación AdFree.
 
-Versión 5.2 (versionCode 8). El botón TV de la rueda LED abre una segunda pantalla basada en la referencia del usuario: fondo oscuro, controles en cian, encendido, flechas, confirmación, volumen, silencio. El mando LG no muestra títulos ni palabras: solo iconos. Las etiquetas para lectores de pantalla se conservan. Atrás de Android vuelve al control de luces. La rueda LED, sus códigos y la frecuencia de 40 kHz se conservan.
-
-## TV por infrarrojo
-
-Los nueve botones usan el juego común LG NEC (bytes de dirección 04 FB) a 38 kHz. La potencia es un conmutador encendido/apagado. Volumen y flechas repiten mientras se mantienen pulsados. Requiere emisor IR accesible y apuntar al receptor. La tabla es un candidato LG habitual; confirmar con el televisor real antes de afirmar compatibilidad específica. No se envían códigos de servicio.
-
-## Puntero por movimiento (experimental)
-
-1. Encendé la TV y conectá teléfono y TV a la misma red Wi-Fi.
-2. En el control LG, mantené el botón central de confirmación pulsado para abrir la configuración.
-3. Ingresá la dirección IPv4 privada de tu TV (se ve en sus ajustes de red) y tocá Conectar.
-4. La primera vez, confirmá que la IP corresponde a tu TV y aceptá su certificado local. La app recuerda su huella únicamente para esa IP; si cambia, vuelve a pedir confirmación. Luego aceptá la solicitud de vinculación que aparece en la TV.
-5. Si webOS concede la conexión y el teléfono tiene giroscopio, aparece un punto verde y se activa el movimiento. Mové suavemente el teléfono; El botón central hace clic con el puntero. Las flechas siguen funcionando como navegación convencional.
-6. Mantené el botón central pulsado y elegí Desactivar para volver a navegación normal. Al salir de la pantalla LG o poner la app en segundo plano, sensores y conexiones se detienen. No se reactiva automáticamente: volvé a Conectar cuando lo necesites.
-
-Esta función usa el protocolo local de webOS por WSS en el puerto 3001 y su socket de entrada. No imita el emparejamiento Bluetooth ni la radio del Magic Remote. Requiere webOS y permisos compatibles con el modelo/firmware; no es compatible con todos los televisores LG ni con NetCast. No hay búsqueda automática de TV, fallback a conexiones sin cifrar, voz, micrófono ni funciones de servicio.
-
-El giroscopio mide los movimientos y el acelerómetro ayuda a compensar la inclinación lateral. Se filtra el ruido y se limitan los desplazamientos. Si no existe giroscopio, la app lo informa y mantiene los botones IR. No se guarda un historial de sensores ni se envían datos a servidores externos. Solo se conecta a la IP privada que ingresa el usuario; la primera vinculación y los cambios de certificado requieren confirmación. La clave de vinculación se guarda en las preferencias privadas de la app.
-
-## Ajuste de pantalla
-
-LgGeometry usa el área segura real y ajusta tamaños y posiciones de los nueve iconos. En vertical agrupa encendido, cruceta y botones inferiores; en horizontal mueve alimentación/silencio a la izquierda y volumen a la derecha para aprovechar la altura. No estira círculos ni muestra las leyendas anteriores. El control LED conserva sus nombres y diseño previos; la solicitud de quitar palabras corresponde a la pantalla LG. Los diálogos de conexión, los avisos de error conservan texto necesario para usarlos.
-
-## Validación y compilación
-
-Actions → Compilar APK LED → ejecución exitosa → artefacto CAMACHO-RGB-CONTROL-LED. Extraé app-debug.apk para instalar. Java 17, Gradle 8.9, AGP 8.7.3, compileSdk/targetSdk 35, minSdk 23. Dependencia de transporte: Java-WebSocket 1.5.7 (MIT), con su dependencia de registro SLF4J.
-
-Las pruebas verifican pulsos NEC y LG, complementos, equivalencia MSB/LSB, rueda LED, dimensiones previas, validación de IP y conversión de movimiento. El workflow ejecuta assembleDebug y lintDebug. La vinculación real, permiso del socket de puntero, certificado del TV, sensibilidad de sensores y respuesta física requieren prueba en el teléfono y televisor del usuario. No se presume un modelo específico a partir de fotos de un anuncio de mandos.
-
-## Referencias primarias
-
-- LG: https://www.lg.com/us/support/help-library/lg-tv-how-to-set-up-the-lg-thinq-app-on-your-lg-smart-tv--20152745625356
-- API local webOS de Connect SDK (LG Electronics): https://github.com/ConnectSDK/Connect-SDK-Android-Core/blob/master/src/com/connectsdk/service/WebOSTVService.java
-- Formato del socket de puntero: https://github.com/ConnectSDK/Connect-SDK-Android-Core/blob/master/src/com/connectsdk/service/webos/WebOSTVMouseSocketConnection.java
-- Códigos LG: https://www.lg.com/us/business/download/resources/BT00001837/206-4322_EV960H_Comm_Mode_Setup_Rev_C.pdf
-- Transporte: https://github.com/TooTallNate/Java-WebSocket
-
-El protocolo se implementa de forma independiente usando sus formatos públicos; no se copia código fuente de Connect SDK en la aplicación. Java-WebSocket se integra como dependencia MIT. La instalación de un APK de depuración puede requerir desinstalar la versión anterior si su firma difiere (se borran los datos locales).
-
-
-Actualización 5.2: se elimina el botón de micrófono, el reconocedor y el vocabulario de voz. Silencio vuelve a quedar centrado en la fila inferior del mando vertical. Se mantienen el diseño adaptable, los iconos sin texto, los controles LED/LG y el puntero opcional.
+Fuentes: https://github.com/webosbrew/youtube-webos
+Servicio webOS SSDP: `urn:lge-com:service:webos-second-screen:1`.

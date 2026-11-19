@@ -57,6 +57,8 @@ public final class LgActivity extends Activity implements SensorEventListener {
                 if(!active)return;
                 if(!pointer.isReady())stopMotion();
                 if(connectionStatus!=null)connectionStatus.setText(message);
+                if(message.startsWith("La TV no aceptó") || message.startsWith("La TV rechazó"))
+                    toast(message);
             }
             public void ready() { if(active)startMotion(); }
             public void connected() {
@@ -157,7 +159,6 @@ public final class LgActivity extends Activity implements SensorEventListener {
                 if(found!=null) {
                     connectHost(found);
                 } else {
-                    pendingAdFree=false;
                     showManualFallback();
                 }
             });
